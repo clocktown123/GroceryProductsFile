@@ -1,0 +1,282 @@
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+
+public class InventoryManager {
+
+    private ArrayList<Product> inventory;
+
+    public InventoryManager() {
+        inventory = new ArrayList<>();
+    }
+
+    public ArrayList<Product> getInventory() {
+        return inventory;
+    }
+
+    // ==================== FILE INPUT ====================
+    public void loadFromFile(String fileName) {
+
+        try (BufferedReader fileIn = Files.newBufferedReader(
+                Paths.get(fileName), Charset.defaultCharset())) {
+
+            String line;
+
+            while ((line = fileIn.readLine()) != null) {
+
+                try {
+                    String[] parts = line.split(",");
+
+                    String type = parts[0];
+                    int id = Integer.parseInt(parts[1]);
+                    String name = parts[2];
+                    double price = Double.parseDouble(parts[3]);
+                    int quantity = Integer.parseInt(parts[4]);
+                    String category = parts[5];
+
+                    if (type.equalsIgnoreCase("B")) {
+                        String brand = parts[6];
+                        String manufacturer = parts[7];
+                        inventory.add(new BrandedItem(id, name, price, quantity, category, brand, manufacturer));
+
+                    } else if (type.equalsIgnoreCase("G")) {
+                        String storeLabel = parts[6];
+                        inventory.add(new GenericItem(id, name, price, quantity, category, storeLabel));
+
+                    } else if (type.equalsIgnoreCase("P")) {
+                        inventory.add(new Product(id, name, price, quantity, category));
+
+                    } else {
+                        System.out.println("Invalid product type: " + line);
+                    }
+
+                } catch (Exception e) {
+                    System.out.println("Skipping bad line: " + line);
+                }
+            }
+
+            System.out.println("Inventory loaded successfully.");
+
+        } catch (IOException e) {
+            System.out.println("Error reading file: " + fileName);
+        }
+    }
+
+    // ==================== FILE OUTPUT ====================
+    public void saveToFile(String fileName) {
+
+        try (BufferedWriter fileOut = Files.newBufferedWriter(
+                Paths.get(fileName),
+                Charset.defaultCharset(),
+                StandardOpenOption.CREATE,
+                StandardOpenOption.TRUNCATE_EXISTING)) {
+
+            for (Product p : inventory) {
+
+                if (p instanceof BrandedItem) {
+                    BrandedItem b = (BrandedItem) p;
+
+                    fileOut.write("B," +
+                            b.itemID + "," +
+                            b.name + "," +
+                            b.price + "," +
+                            b.quantity + "," +
+                            b.category + "," +
+                            b.getBrandName() + "," +
+                            b.getManufacturerName());
+
+                } else if (p instanceof GenericItem) {
+                    GenericItem g = (GenericItem) p;
+
+                    fileOut.write("G," +
+                            g.itemID + "," +
+                            g.name + "," +
+                            g.price + "," +
+                            g.quantity + "," +
+                            g.category + "," +
+                            g.getStoreLabelInformation());
+
+                } else {
+                    fileOut.write("P," +
+                            p.itemID + "," +
+                            p.name + "," +
+                            p.price + "," +
+                            p.quantity + "," +
+                            p.category);
+                }
+
+                fileOut.newLine();
+            }
+
+            System.out.println("Inventory saved successfully.");
+
+        } catch (IOException e) {
+            System.out.println("Error writing file.");
+        }
+    }
+
+    // ==================== ADD ====================
+    public void addProduct(Product product) {
+
+        // Prevent duplicate IDs
+        for (Product p : inventory) {
+            if (p.itemID == product.itemID) {
+                System.out.println("Item ID already exists.");
+                return;
+            }
+        }
+
+        inventory.add(product);
+        System.out.println(product.name + " was added to inventory.");
+    }
+
+    // ==================== REMOVE ====================
+    public void removeProduct(String name, int amount) {
+
+        if (inventory.isEmpty()) {
+            System.out.println("No products in inventory.");
+            return;
+        }
+
+        for (int i = 0; i < inventory.size(); i++) {
+
+            Product product = inventory.get(i);
+
+            if (product.name.equalsIgnoreCase(name)) {
+
+                if (amount > product.quantity) {
+                    System.out.println("Not enough stock.");
+                    return;
+                }
+
+                product.quantity -= amount;
+
+                if (product.quantity == 0) {
+                    inventory.remove(i);
+                    System.out.println(name + " removed from inventory.");
+                } else {
+                    System.out.println("Stock updated.");
+                }
+
+                return;
+            }
+        }
+
+        System.out.println("Product not found.");
+    }
+
+    // ==================== VIEW ====================
+    public void viewInventory() {
+
+        if (inventory.isEmpty()) {
+            System.out.println("No products in inventory.");
+            return;
+        }
+
+        for (Product product : inventory) {
+            printProductDetails(product);
+        }
+    }
+
+    private void printProductDetails(Product product) {
+
+        System.out.printf(
+                "ID: %d | Name: %s | Category: %s | Price: $%.2f | Quantity: %d%n",
+                product.itemID,
+                product.name,
+                product.category,
+                product.price,
+                product.quantity
+        );
+
+        if (product instanceof BrandedItem) {
+            BrandedItem b = (BrandedItem) product;
+            System.out.println("Brand: " + b.getBrandName() +
+                    ", Manufacturer: " + b.getManufacturerName());
+        }
+
+        if (product instanceof GenericItem) {
+            GenericItem g = (GenericItem) product;
+            System.out.println("Store Label: " + g.getStoreLabelInformation());
+        }
+
+        if (product.quantity < 5) {
+            System.out.println("LOW STOCK ALERT");
+        }
+
+        System.out.println("--------------------------------");
+    }
+
+    // ==================== PURCHASE ====================
+    public boolean purchaseProduct(String name) {
+
+        for (Product product : inventory) {
+
+            if (product.name.equalsIgnoreCase(name)) {
+
+                if (product.quantity <= 0) {
+                    System.out.println("Out of stock.");
+                    return false;
+                }
+
+                product.quantity--;
+                product.timesPurchased++;
+
+                System.out.println("Purchased " + product.name);
+                return true;
+            }
+        }
+
+        System.out.println("Product not found.");
+        return false;
+    }
+
+    // ==================== SEARCH ====================
+    public Product searchProductByName(String name) {
+        for (Product p : inventory) {
+            if (p.name.equalsIgnoreCase(name)) {
+                return p;
+            }
+        }
+        return null;
+    }
+
+    public Product searchProductByID(int id) {
+        for (Product p : inventory) {
+            if (p.itemID == id) {
+                return p;
+            }
+        }
+        return null;
+    }
+
+    // ==================== SORT ====================
+    public void sortAZ() {
+        sortRecursiveAlphabetical(0);
+    }
+
+    private void sortRecursiveAlphabetical(int startIndex) {
+
+        if (startIndex >= inventory.size() - 1) return;
+
+        int smallestIndex = startIndex;
+
+        for (int i = startIndex + 1; i < inventory.size(); i++) {
+            if (inventory.get(i).name.compareToIgnoreCase(
+                    inventory.get(smallestIndex).name) < 0) {
+                smallestIndex = i;
+            }
+        }
+
+        Product temp = inventory.get(startIndex);
+        inventory.set(startIndex, inventory.get(smallestIndex));
+        inventory.set(smallestIndex, temp);
+
+        sortRecursiveAlphabetical(startIndex + 1);
+    }
+}
