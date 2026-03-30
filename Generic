@@ -1,0 +1,16 @@
+public class GenericItem extends Product{
+
+    private String storeLabelInformation;
+
+    public GenericItem(int itemID, String name, double price, int quantity, String category, String storeLabelInformation) {
+        super(itemID, name, price, quantity, category);
+        this.storeLabelInformation = storeLabelInformation;
+    }
+
+    public String getStoreLabelInformation() {
+        return storeLabelInformation;
+    }
+
+
+
+}
