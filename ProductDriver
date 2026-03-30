@@ -1,0 +1,260 @@
+import java.util.Scanner;
+
+public class ProductDriver {
+
+    public static void main(String[] args) {
+        InventoryManager manager = new InventoryManager();
+        Scanner stdIn = new Scanner(System.in);
+
+        manager.loadFromFile("inventory.txt");
+
+        boolean running = true;
+
+        while (running) {
+            System.out.println("\n=== GROCERY INVENTORY SYSTEM ===");
+            System.out.println("1. Manager Mode");
+            System.out.println("2. User Mode");
+            System.out.println("3. Save and Exit");
+            System.out.print("Choose an option: ");
+
+            int choice = readInt(stdIn);
+
+            switch (choice) {
+                case 1:
+                    runManagerMode(stdIn, manager);
+                    break;
+                case 2:
+                    runUserMode(stdIn, manager);
+                    break;
+                case 3:
+                    manager.saveToFile("inventory.txt");
+                    running = false;
+                    System.out.println("Inventory saved. Goodbye!");
+                    break;
+                default:
+                    System.out.println("Invalid choice. Please enter 1-3.");
+            }
+        }
+
+        stdIn.close();
+    }
+
+    // -------------------- MANAGER MODE --------------------
+    private static void runManagerMode(Scanner stdIn, InventoryManager manager) {
+        boolean inManagerMode = true;
+
+        while (inManagerMode) {
+            System.out.println("\n--- MANAGER MODE ---");
+            System.out.println("1. View Full Inventory");
+            System.out.println("2. Add New Item");
+            System.out.println("3. Remove Stock");
+            System.out.println("4. Search Product");
+            System.out.println("5. Sort Inventory A-Z");
+            System.out.println("6. Save Inventory");
+            System.out.println("7. Back to Main Menu");
+            System.out.print("Choose an option: ");
+
+            int choice = readInt(stdIn);
+
+            switch (choice) {
+                case 1:
+                    manager.viewInventory();
+                    break;
+
+                case 2:
+                    addItemFlow(stdIn, manager);
+                    manager.saveToFile("inventory.txt");
+                    break;
+
+                case 3:
+                    removeItemFlow(stdIn, manager);
+                    manager.saveToFile("inventory.txt");
+                    break;
+
+                case 4:
+                    searchFlow(stdIn, manager);
+                    break;
+
+                case 5:
+                    manager.sortAZ();
+                    manager.viewInventory();
+                    break;
+
+                case 6:
+                    manager.saveToFile("inventory.txt");
+                    System.out.println("Inventory saved.");
+                    break;
+
+                case 7:
+                    inManagerMode = false;
+                    break;
+
+                default:
+                    System.out.println("Invalid choice. Please enter 1-7.");
+            }
+        }
+    }
+
+    // -------------------- USER MODE --------------------
+    private static void runUserMode(Scanner stdIn, InventoryManager manager) {
+        boolean inUserMode = true;
+
+        while (inUserMode) {
+            System.out.println("\n--- USER MODE ---");
+            System.out.println("1. View Available Items");
+            System.out.println("2. Search Item");
+            System.out.println("3. Purchase Item");
+            System.out.println("4. Back to Main Menu");
+            System.out.print("Choose an option: ");
+
+            int choice = readInt(stdIn);
+
+            switch (choice) {
+                case 1:
+                    manager.viewInventory();
+                    break;
+
+                case 2:
+                    searchFlow(stdIn, manager);
+                    break;
+
+                case 3:
+                    System.out.print("Enter product name to purchase: ");
+                    String purchaseName = stdIn.nextLine();
+                    manager.purchaseProduct(purchaseName);
+                    manager.saveToFile("inventory.txt");
+                    break;
+
+                case 4:
+                    inUserMode = false;
+                    break;
+
+                default:
+                    System.out.println("Invalid choice. Please enter 1-4.");
+            }
+        }
+    }
+
+    // -------------------- ADD ITEM FLOW --------------------
+    private static void addItemFlow(Scanner stdIn, InventoryManager manager) {
+        System.out.println("\nAdd what type of item?");
+        System.out.println("1. Product");
+        System.out.println("2. Branded Item");
+        System.out.println("3. Generic Store Item");
+        System.out.print("Choose an option: ");
+
+        int type = readInt(stdIn);
+
+        try {
+            System.out.print("Item ID: ");
+            int itemID = readInt(stdIn);
+
+            System.out.print("Name: ");
+            String name = stdIn.nextLine();
+
+            System.out.print("Price: ");
+            double price = readDouble(stdIn);
+
+            System.out.print("Quantity: ");
+            int quantity = readInt(stdIn);
+
+            System.out.print("Category: ");
+            String category = stdIn.nextLine();
+
+            if (type == 1) {
+                manager.addProduct(new Product(itemID, name, price, quantity, category));
+            } else if (type == 2) {
+                System.out.print("Brand Name: ");
+                String brand = stdIn.nextLine();
+
+                System.out.print("Manufacturer Name: ");
+                String manufacturer = stdIn.nextLine();
+
+                manager.addProduct(new BrandedItem(itemID, name, price, quantity, category, brand, manufacturer));
+            } else if (type == 3) {
+                System.out.print("Store Label Information: ");
+                String storeLabel = stdIn.nextLine();
+
+                manager.addProduct(new GenericItem(itemID, name, price, quantity, category, storeLabel));
+            } else {
+                System.out.println("Invalid item type.");
+            }
+
+        } catch (Exception e) {
+            System.out.println("Invalid input. Item not added.");
+            stdIn.nextLine();
+        }
+    }
+
+    // -------------------- REMOVE ITEM FLOW --------------------
+    private static void removeItemFlow(Scanner stdIn, InventoryManager manager) {
+        System.out.print("Enter product name to remove: ");
+        String name = stdIn.nextLine();
+
+        System.out.print("Enter amount to remove: ");
+        int amount = readInt(stdIn);
+
+        manager.removeProduct(name, amount);
+    }
+
+    // -------------------- SEARCH FLOW --------------------
+    private static void searchFlow(Scanner stdIn, InventoryManager manager) {
+        System.out.println("\nSearch by:");
+        System.out.println("1. ID");
+        System.out.println("2. Name");
+        System.out.print("Choose an option: ");
+
+        int choice = readInt(stdIn);
+
+        if (choice == 1) {
+            System.out.print("Enter product ID: ");
+            int id = readInt(stdIn);
+
+            Product found = manager.searchProductByID(id);
+
+            if (found != null) {
+                System.out.println("Found: " + found.name);
+            } else {
+                System.out.println("Product not found.");
+            }
+
+        } else if (choice == 2) {
+            System.out.print("Enter product name: ");
+            String name = stdIn.nextLine();
+
+            Product found = manager.searchProductByName(name);
+
+            if (found != null) {
+                System.out.println("Found: " + found.name);
+            } else {
+                System.out.println("Product not found.");
+            }
+
+        } else {
+            System.out.println("Invalid choice.");
+        }
+    }
+
+    // -------------------- INPUT HELPERS --------------------
+    private static int readInt(Scanner stdIn) {
+        while (true) {
+            try {
+                String input = stdIn.nextLine().trim();
+                return Integer.parseInt(input);
+            } catch (NumberFormatException e) {
+                System.out.print("Invalid integer. Try again: ");
+            }
+        }
+    }
+
+    private static double readDouble(Scanner stdIn) {
+        while (true) {
+            try {
+                String input = stdIn.nextLine().trim();
+                return Double.parseDouble(input);
+            } catch (NumberFormatException e) {
+                System.out.print("Invalid decimal number. Try again: ");
+            }
+        }
+    }
+}
